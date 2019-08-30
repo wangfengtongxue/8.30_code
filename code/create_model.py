@@ -42,14 +42,14 @@ def conv_block(m, dim, acti, bn, res, do=0):
     return Concatenate()([m, n]) if res else n
 
 # 这里基本就是整个模型了
-def level_block(m, dim, depth, inc, acti, do, bn, mp, up, res):
+def level_block(m, dim, depth, inc, acti, do, bn, mp, up, res):  #depth为下采样的深度，m为网络输入，inc*dim为网络每一层输出通道数，acti为激活函数，do=dropout,res:是否有res块
     if depth > 0:
         n = conv_block(m, dim, acti, bn, res)
-        m = MaxPooling2D()(n) if mp else Conv2D(dim, 3, strides=2, padding='same')(n)
+        m = MaxPooling2D()(n) if mp else Conv2D(dim, 3, strides=2, padding='same')(n)#下采样过程
         m = level_block(m, int(inc*dim), depth-1, inc, acti, do, bn, mp, up, res)
         if up:
             m = UpSampling2D()(m)
-            m = Conv2D(dim, 2, activation=acti, padding='same')(m)
+            m = Conv2D(dim, 2, activation=acti, padding='same')(m)#上采样过程
         else:
             m = Conv2DTranspose(dim, 3, strides=2, activation=acti, padding='same')(m)
         n = Concatenate()([n, m])
@@ -61,7 +61,7 @@ def level_block(m, dim, depth, inc, acti, do, bn, mp, up, res):
 def UNet(img_shape=(256,256,5), out_ch=2, start_ch=64, depth=4, inc_rate=2., activation='relu', dropout=0.3, batchnorm=False, maxpool=True, upconv=True, residual=True):
     i = Input(shape=img_shape)
     o = level_block(i, start_ch, depth, inc_rate, activation, dropout, batchnorm, maxpool, upconv, residual)
-    o = Conv2D(out_ch, 1, activation='sigmoid')(o)
+    o = Conv2D(out_ch, 1, activation='sigmoid')(o)#输出的维度为256×256×2
     model = Model(inputs=i, outputs=o)
 
     optimizer_select = optimizers.Adam(lr=1e-4, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
